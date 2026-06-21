@@ -3,13 +3,12 @@ import Sidebar from './components/Sidebar'
 import Editor from './components/Editor'
 import PdfPreview from './components/PdfPreview'
 import VisualEditor from './components/VisualEditor'
-import { listFiles, readFile, writeFile, compile } from './api'
+import { listFiles, readFile, compile } from './api'
 
 export default function App() {
   const [files, setFiles] = useState([])
   const [active, setActive] = useState(null)
-  const [contents, setContents] = useState({}) // path -> text
-  const [dirty, setDirty] = useState(new Set())
+  const [contents, setContents] = useState({}) // path -> text (in memory only)
 
   const [pdf, setPdf] = useState(null)
   const [log, setLog] = useState('')
@@ -27,12 +26,12 @@ export default function App() {
   activeRef.current = active
   const autoRef = useRef(autocompile)
   autoRef.current = autocompile
-  const saveTimer = useRef(null)
+  const compileTimer = useRef(null)
 
   // ---- undo / redo history (per file) ----
-  const histories = useRef({}) // path -> { past: [], future: [] }
+  const histories = useRef({})
   const histTimer = useRef(null)
-  const pending = useRef(null) // { path, value } — state before the current edit burst
+  const pending = useRef(null)
   const histFor = (p) => histories.current[p] || (histories.current[p] = { past: [], future: [] })
 
   const commitPending = useCallback(() => {
@@ -48,45 +47,23 @@ export default function App() {
     h.future = []
   }, [])
 
-  // Coalesce a burst of keystrokes into a single undo step (snapshot the state
-  // from just before the burst).
   const recordHistory = useCallback((path, prevValue) => {
     if (pending.current === null) pending.current = { path, value: prevValue }
     clearTimeout(histTimer.current)
     histTimer.current = setTimeout(commitPending, 500)
   }, [commitPending])
 
-  // ---- load project ----
-  useEffect(() => {
-    ;(async () => {
-      const list = await listFiles()
-      setFiles(list)
-      const first = list.includes('main.tex') ? 'main.tex' : list[0]
-      if (first) {
-        const text = await readFile(first)
-        setContents({ [first]: text })
-        setActive(first)
-      }
-    })().catch((e) => setLog(String(e)))
-  }, [])
-
-  const openFile = useCallback(async (path) => {
-    if (contentsRef.current[path] === undefined) {
-      const text = await readFile(path)
-      setContents((c) => ({ ...c, [path]: text }))
-    }
-    setActive(path)
-  }, [])
-
-  // ---- compile ----
+  // ---- compile (stateless: send the whole in-memory file set) ----
   const doCompile = useCallback(async () => {
     const a = activeRef.current
     if (!a) return
     setCompiling(true)
-    const cur = contentsRef.current[a] || ''
+    const files = {}
+    for (const [k, v] of Object.entries(contentsRef.current)) if (typeof v === 'string') files[k] = v
+    const cur = files[a] || ''
     const root = cur.includes('\\documentclass') ? a : 'main.tex'
     try {
-      const res = await compile(root)
+      const res = await compile(files, root)
       setPdf((prev) => res.pdf || prev)
       setLog(res.log || '')
       setOk(!!res.ok)
@@ -99,34 +76,37 @@ export default function App() {
     }
   }, [])
 
-  const flush = useCallback(async (path) => {
-    await writeFile(path, contentsRef.current[path])
-    setDirty((d) => { const n = new Set(d); n.delete(path); return n })
+  const scheduleCompile = useCallback(() => {
+    clearTimeout(compileTimer.current)
+    compileTimer.current = setTimeout(() => {
+      if (autoRef.current) doCompile()
+    }, 700)
+  }, [doCompile])
+
+  // ---- load template into memory, then compile once ----
+  useEffect(() => {
+    ;(async () => {
+      const list = await listFiles()
+      setFiles(list)
+      const entries = await Promise.all(list.map(async (f) => [f, await readFile(f)]))
+      setContents(Object.fromEntries(entries))
+      setActive(list.includes('main.tex') ? 'main.tex' : list[0] || null)
+    })().catch((e) => setLog(String(e)))
   }, [])
 
-  // First compile once a file is loaded.
   useEffect(() => {
     if (active && pdf === null) doCompile()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active])
 
   // ---- editing (shared by source + visual editors) ----
-  const queueSave = useCallback((a) => {
-    setDirty((d) => new Set(d).add(a))
-    clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(async () => {
-      await flush(a)
-      if (autoRef.current) doCompile()
-    }, 700)
-  }, [doCompile, flush])
-
   const onEdit = useCallback((text) => {
     const a = activeRef.current
     if (!a) return
     recordHistory(a, contentsRef.current[a] ?? '')
     setContents((c) => ({ ...c, [a]: text }))
-    queueSave(a)
-  }, [queueSave, recordHistory])
+    scheduleCompile()
+  }, [recordHistory, scheduleCompile])
 
   const undo = useCallback(() => {
     const a = activeRef.current
@@ -135,11 +115,10 @@ export default function App() {
     const h = histFor(a)
     if (!h.past.length) return
     h.future.push(contentsRef.current[a] ?? '')
-    const prev = h.past.pop()
-    setContents((c) => ({ ...c, [a]: prev }))
+    setContents((c) => ({ ...c, [a]: h.past.pop() }))
     setSyncNonce((n) => n + 1)
-    queueSave(a)
-  }, [commitPending, queueSave])
+    scheduleCompile()
+  }, [commitPending, scheduleCompile])
 
   const redo = useCallback(() => {
     const a = activeRef.current
@@ -148,38 +127,30 @@ export default function App() {
     const h = histFor(a)
     if (!h.future.length) return
     h.past.push(contentsRef.current[a] ?? '')
-    const nxt = h.future.pop()
-    setContents((c) => ({ ...c, [a]: nxt }))
+    setContents((c) => ({ ...c, [a]: h.future.pop() }))
     setSyncNonce((n) => n + 1)
-    queueSave(a)
-  }, [commitPending, queueSave])
+    scheduleCompile()
+  }, [commitPending, scheduleCompile])
 
-  const compileNow = useCallback(async () => {
-    const a = activeRef.current
-    if (a) await flush(a)
-    await doCompile()
-  }, [doCompile, flush])
+  const openFile = useCallback(async (path) => {
+    if (contentsRef.current[path] === undefined) {
+      setContents((c) => ({ ...c, [path]: '' }))
+      try { const text = await readFile(path); setContents((c) => ({ ...c, [path]: text })) } catch { /* ignore */ }
+    }
+    setActive(path)
+  }, [])
+
+  const compileNow = useCallback(() => doCompile(), [doCompile])
 
   // ---- shortcuts ----
   useEffect(() => {
     const h = (e) => {
       if (!(e.metaKey || e.ctrlKey)) return
-      if (e.key === 's' || e.key === 'Enter') {
-        e.preventDefault()
-        compileNow()
-        return
-      }
-      // Let CodeMirror handle undo/redo when the source pane is focused;
-      // everywhere else (visual editor, etc.) use the app-level history.
+      if (e.key === 's' || e.key === 'Enter') { e.preventDefault(); compileNow(); return }
       const inCodeMirror = e.target.closest && e.target.closest('.cm-editor')
       if (inCodeMirror) return
-      if (e.key === 'z') {
-        e.preventDefault()
-        e.shiftKey ? redo() : undo()
-      } else if (e.key === 'y') {
-        e.preventDefault()
-        redo()
-      }
+      if (e.key === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo() }
+      else if (e.key === 'y') { e.preventDefault(); redo() }
     }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
@@ -189,11 +160,14 @@ export default function App() {
 
   return (
     <div className="app">
-      <Sidebar files={files} active={active} onOpen={openFile} dirty={dirty} />
+      <Sidebar files={files} active={active} onOpen={openFile} />
 
       <main className="workspace">
         <div className="toolbar">
           <span className="crumb">{active || '—'}</span>
+          <span className="ephemeral" title="This is a demo. Edits live only in your browser and are never saved.">
+            demo · not saved
+          </span>
           <div className="spacer" />
           <label className="auto">
             <input type="checkbox" checked={autocompile} onChange={(e) => setAutocompile(e.target.checked)} />

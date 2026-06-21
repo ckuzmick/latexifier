@@ -1,5 +1,9 @@
 node_modules/
 dist/
+.env
+.env.local
+.env.*.local
+.vercel
 # LaTeX build artifacts (everything except source files in projects)
 projects/**/.build/
 *.aux

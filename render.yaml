@@ -1,0 +1,14 @@
+# Render.com blueprint for the compile backend (Docker image with TeX).
+# Create a new Blueprint from the repo, or deploy the Dockerfile directly.
+services:
+  - type: web
+    name: latexifier-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      # Restrict CORS to your Vercel frontend once you know its URL, e.g.
+      # https://latexifier.vercel.app  (leave unset to allow any origin).
+      - key: ALLOW_ORIGIN
+        sync: false

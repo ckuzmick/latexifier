@@ -1,0 +1,13 @@
+node_modules
+dist
+.git
+.gitignore
+src
+index.html
+vite.config.js
+vercel.json
+README.md
+**/.build
+*.log
+.env
+.env.*

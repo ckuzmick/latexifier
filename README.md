@@ -23,36 +23,49 @@ The `src/lib/mathInput.js` module also provides a text "simple math → LaTeX"
 converter (`a/b → \frac{a}{b}`, auto-sizing parens, greek names, etc.) used as a
 fallback when MathQuill isn't available.
 
-## Storage
+## Storage — none (ephemeral by design)
 
-This demo has no database. The sample account's project lives on disk under
-`projects/sample-project/`. Editing in the UI saves straight to those files;
-compiles read them back. Build artifacts go in `projects/<project>/.build/`.
+There is no database and **nothing is saved**. The files under
+`projects/sample-project/` are a read-only *template* used only to seed a new
+session. All editing happens in the browser's memory; the compile endpoint is
+**stateless** — the client sends the current file set, the server compiles it in
+a throwaway temp dir, returns the PDF, and deletes the dir. Refresh the page and
+you're back to the template. (A "demo · not saved" tag in the toolbar makes this
+explicit.)
 
 ## Running
 
-Requires Node 18+ and a TeX installation (`latexmk` + `pdflatex` on your PATH —
-MacTeX / TeX Live both work).
+Requires Node 18+ and a TeX install (`latexmk` + `pdflatex` on PATH).
 
 ```bash
 npm install
 npm run dev
 ```
 
-Then open http://localhost:5173.
+Open http://localhost:5173. `npm run dev` runs Vite (`:5173`, proxies `/api`)
+and the stateless compile server (`:3019`).
 
-`npm run dev` starts two processes:
-- **web** — Vite dev server on `:5173` (proxies `/api` to the backend)
-- **server** — Express API + LaTeX compiler on `:3019`
+## Deploying (Vercel frontend + TeX backend container)
 
-Override the backend port with `PORT=xxxx` if `3019` is taken.
+Vercel can't run TeX, so compilation lives in a container that has it:
+
+1. **Backend** — deploy the `Dockerfile` (Node + TeX + latexmk) to a container
+   host (Render / Railway / Fly.io). A `render.yaml` blueprint is included.
+   Note the resulting URL, e.g. `https://latexifier-api.onrender.com`.
+   Optionally set `ALLOW_ORIGIN` to your frontend URL to lock down CORS.
+2. **Frontend** — import the repo into Vercel (it auto-detects Vite via
+   `vercel.json`). Set the env var `VITE_API_BASE` to the backend URL from
+   step 1, and deploy.
+
+The backend writes nothing persistent, so it scales/restarts freely. Override
+the local backend port with `PORT=xxxx` if `3019` is taken.
 
 ## Layout
 
 ```
-server/index.js        Express API: file CRUD + latexmk compile (sandboxed to projects/)
+server/index.js        Express API: template reads + stateless latexmk compile
 src/
-  App.jsx              app shell, state, debounced auto-save + auto-compile
+  App.jsx              app shell, in-memory files, debounced auto-compile, undo/redo
   components/
     Sidebar.jsx        file tree
     Editor.jsx         CodeMirror 6 source editor (LaTeX highlighting)
