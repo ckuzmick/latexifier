@@ -1,0 +1,218 @@
+:root {
+  --bg: #ffffff;
+  --bg-soft: #fafafa;
+  --bg-panel: #f6f6f7;
+  --border: #e7e7ea;
+  --text: #1d1d20;
+  --muted: #8a8a93;
+  --accent: #4f46e5;
+  --accent-soft: #eef0fe;
+  --ok: #16a34a;
+  --err: #dc2626;
+  --radius: 8px;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  padding: 4px 12px;
+  border-radius: 6px;
+  transition: background 0.12s, border-color 0.12s;
+}
+button:hover { background: var(--bg-soft); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary:hover { filter: brightness(1.05); }
+button.primary:disabled { opacity: 0.6; cursor: default; }
+button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+.app { display: flex; height: 100%; }
+
+/* ---- sidebar ---- */
+.sidebar {
+  width: 224px;
+  flex: 0 0 224px;
+  border-right: 1px solid var(--border);
+  background: var(--bg-soft);
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-head { padding: 16px 16px 10px; }
+.logo { display: block; font-weight: 650; font-size: 15px; letter-spacing: -0.01em; }
+.project { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.filelist { list-style: none; margin: 6px 0 0; padding: 0 8px; }
+.filelist li {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: 6px; font-size: 13px; color: #3a3a40;
+}
+.filelist li:hover { background: #efeff1; }
+.filelist li.active { background: var(--accent-soft); color: var(--accent); font-weight: 550; }
+.file-icon { width: 14px; text-align: center; color: var(--muted); }
+.filelist li.active .file-icon { color: var(--accent); }
+.file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+/* ---- workspace ---- */
+.workspace { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.toolbar {
+  display: flex; align-items: center; gap: 12px;
+  height: 46px; padding: 0 14px; border-bottom: 1px solid var(--border);
+}
+.crumb { font-size: 13px; color: var(--muted); }
+.spacer { flex: 1; }
+.auto { font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 5px; user-select: none; }
+
+.panes { flex: 1; display: flex; min-height: 0; }
+.pane { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.editor-pane { border-right: 1px solid var(--border); }
+.editor-host { flex: 1; min-height: 0; overflow: hidden; }
+.editor-host .cm-editor { height: 100%; }
+
+/* ---- right pane ---- */
+.right-pane { background: var(--bg-panel); }
+.right-tabs {
+  display: flex; align-items: center; gap: 6px;
+  height: 40px; padding: 0 10px; border-bottom: 1px solid var(--border); background: var(--bg);
+}
+.right-tabs button { padding: 3px 10px; font-size: 12.5px; }
+.status { font-size: 12px; border: none; background: none; padding: 3px 6px; }
+.status.ok { color: var(--ok); }
+.status.err { color: var(--err); }
+.right-body { flex: 1; position: relative; min-height: 0; overflow: hidden; display: flex; }
+
+/* ---- pdf ---- */
+.pdf-wrap { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+.pdf-controls {
+  position: absolute; top: 10px; right: 14px; z-index: 5;
+  display: flex; align-items: center; gap: 4px;
+  background: rgba(255,255,255,0.92); backdrop-filter: blur(6px);
+  border: 1px solid var(--border); border-radius: 8px; padding: 3px 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+.pdf-controls button { padding: 1px 9px; font-size: 14px; line-height: 1.4; border: none; background: none; }
+.pdf-controls button:hover { background: var(--bg-soft); }
+.pdf-controls button:last-child { font-size: 12px; padding: 2px 8px; }
+.pdf-zoom {
+  font-size: 12px; color: var(--muted); min-width: 42px; text-align: center;
+  cursor: pointer; user-select: none;
+}
+.pdf-scroller { flex: 1; overflow: auto; background: #f0f0f2; padding: 20px 0; }
+.pdf-pages { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.pdf-page { box-shadow: 0 2px 12px rgba(0,0,0,0.12); background: #fff; border-radius: 2px; }
+.pdf-empty { text-align: center; color: var(--muted); margin-top: 40px; font-size: 13px; }
+.pdf-count {
+  position: absolute; bottom: 10px; right: 14px; font-size: 11px; color: var(--muted);
+  background: rgba(255,255,255,0.85); padding: 2px 8px; border-radius: 20px; border: 1px solid var(--border);
+}
+
+/* ---- visual editor ---- */
+.visual { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.visual-doc {
+  flex: 1; overflow: auto; padding: 40px 56px; background: #fff;
+  max-width: 820px; margin: 0 auto; width: 100%; line-height: 1.7; font-size: 15px;
+}
+.visual-empty { color: var(--muted); }
+.vb { border-radius: 6px; transition: background 0.1s; }
+.vb:hover { background: var(--accent-soft); cursor: text; outline: 1px solid transparent; }
+[contenteditable] { outline: none; }
+[contenteditable]:focus { background: var(--accent-soft); box-shadow: inset 0 0 0 1px #cfd0e8; }
+.vb-heading { font-weight: 650; cursor: text; margin: 22px 0 8px; line-height: 1.3; }
+.vb-title { font-size: 26px; text-align: center; }
+.vb-section { font-size: 21px; }
+.vb-subsection { font-size: 17px; }
+.vb-text { margin: 12px 0; padding: 2px 4px; }
+.vb-math {
+  margin: 16px 0; padding: 10px; text-align: center; cursor: pointer;
+  border: 1px dashed transparent;
+}
+.vb-math:hover { border-color: #cfd0e8; background: var(--accent-soft); }
+.vb-locked {
+  margin: 10px 0; padding: 8px 10px; font-size: 12px; color: var(--muted);
+  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 6px;
+  white-space: pre-wrap; font-family: ui-monospace, Menlo, monospace; cursor: not-allowed;
+}
+.visual-foot {
+  display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+  border-top: 1px solid var(--border); background: var(--bg);
+}
+.visual-foot-note { font-size: 12px; color: var(--muted); }
+
+/* inline edit */
+.vb-edit { margin: 12px 0; }
+.vb-edit textarea {
+  width: 100%; min-height: 80px; font: inherit; padding: 10px; border: 1px solid var(--accent);
+  border-radius: 8px; resize: vertical; outline: none; line-height: 1.6;
+}
+.vb-edit-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.vb-edit-hint { font-size: 12px; color: var(--muted); }
+
+/* ---- equation editor ---- */
+.eq-editor {
+  margin: 16px 0; padding: 14px; border: 1px solid var(--accent); border-radius: 10px;
+  background: #fff; box-shadow: 0 6px 24px rgba(79,70,229,0.12);
+}
+.eq-modes { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.eq-modes button { padding: 2px 10px; font-size: 12.5px; }
+.eq-hint { font-size: 12px; color: var(--muted); margin-left: 6px; font-family: ui-monospace, Menlo, monospace; }
+.eq-input {
+  width: 100%; min-height: 56px; font-family: ui-monospace, Menlo, monospace; font-size: 14px;
+  padding: 10px; border: 1px solid var(--border); border-radius: 8px; resize: vertical; outline: none;
+}
+.eq-input:focus { border-color: var(--accent); }
+.eq-mathfield {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 72px; padding: 14px 16px; background: var(--bg-soft);
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.mathquill-field {
+  border: none !important; box-shadow: none !important; background: transparent;
+  font-size: inherit;
+}
+.mathquill-field.mq-focused { outline: none; }
+.eq-mathfield .mathquill-field,
+.vb-math .mathquill-field { font-size: 22px; min-width: 60px; }
+
+/* inline math fields flow inside paragraph text */
+.mathquill-inline { vertical-align: baseline; padding: 0 1px; border-radius: 4px; cursor: text; }
+.mathquill-inline:hover { background: var(--accent-soft); }
+.mathquill-inline.mq-focused { background: var(--accent-soft); box-shadow: inset 0 0 0 1px #cfd0e8 !important; }
+
+/* editable text runs between inline math */
+.vb-text:hover { background: transparent; }
+.vb-seg-text { white-space: pre-wrap; }
+.vb-seg-text:empty { display: inline-block; min-width: 5px; }
+.vb-seg-text:focus { background: var(--accent-soft); box-shadow: none; border-radius: 4px; }
+.eq-preview {
+  margin: 12px 0; padding: 16px; background: var(--bg-soft); border-radius: 8px;
+  text-align: center; min-height: 48px; display: flex; align-items: center; justify-content: center;
+}
+.eq-latex-out {
+  display: block; font-size: 12px; color: var(--muted); background: var(--bg-soft);
+  padding: 6px 10px; border-radius: 6px; word-break: break-all; margin-bottom: 10px;
+}
+.eq-actions { display: flex; gap: 8px; }
+
+/* ---- log ---- */
+.logpane {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 40%;
+  background: #1e1e22; color: #e6e6e6; display: flex; flex-direction: column;
+  border-top: 2px solid var(--err);
+}
+.logpane-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 12px; font-size: 12px; color: #bdbdbd; border-bottom: 1px solid #333;
+}
+.logpane-head button { background: #2c2c31; color: #ddd; border-color: #444; padding: 2px 8px; }
+.logpane pre { flex: 1; overflow: auto; margin: 0; padding: 10px 12px; font-size: 11.5px; line-height: 1.5; }
+
+.kx-display { display: block; }

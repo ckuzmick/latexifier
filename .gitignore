@@ -1,0 +1,11 @@
+node_modules/
+dist/
+# LaTeX build artifacts (everything except source files in projects)
+projects/**/.build/
+*.aux
+*.log
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.out
+*.toc
